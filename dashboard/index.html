@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AulaSense Dashboard</title>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <h1>AulaSense</h1>
+
+    <div class="contenedor">
+
+        <!--  PANEL -->
+        <div class="card">
+
+            <h2>🔊 Sonido</h2>
+            <p id="sonido">0</p>
+
+        </div>
+
+        <div class="card">
+
+            <h2>🚶 Movimiento</h2>
+
+            <p id="movimiento">
+                Sin datos
+            </p>
+
+        </div>
+
+        <!-- SALÓN -->
+        <div class="salon-container">
+
+            <h2>Simulación del Aula</h2>
+
+            <canvas id="salon" width="700" height="400"></canvas>
+
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
