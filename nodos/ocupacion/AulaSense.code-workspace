@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "ambiente",
+			"path": "../ambiente"
+		},
+		{
+			"name": "entrada",
+			"path": "../entrada"
+		},
+		{
+			"name": "ocupacion",
+			"path": "."
+		}
+	],
+	"settings": {}
+}

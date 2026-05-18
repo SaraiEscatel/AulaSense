@@ -1,22 +1,33 @@
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 
 const host = "0.0.0.0";
 const port = 8040;
 
-//  Datos globales
+// =========================
+// DATOS GLOBALES
+// =========================
+
 let datos = {
   temperatura: 0,
   humedad: 0,
   sonido: 0,
   movimiento: 0,
+  personas: 0,
 };
+
+// =========================
+// SERVER
+// =========================
 
 const server = http.createServer((req, res) => {
   console.log(`Petición: ${req.method} ${req.url}`);
 
-  // =========================
+  // =====================
   // RECIBIR DATOS ESP32
-  // =========================
+  // =====================
+
   if (req.method === "POST" && req.url === "/data") {
     let body = "";
 
@@ -31,7 +42,6 @@ const server = http.createServer((req, res) => {
       try {
         const json = JSON.parse(body);
 
-        //  Guardar datos
         datos = {
           ...datos,
           ...json,
@@ -52,96 +62,75 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  // =========================
-  // DASHBOARD
-  // =========================
-  else if (req.method === "GET" && req.url === "/") {
+  // =====================
+  // ENVIAR DATOS
+  // =====================
+  else if (req.method === "GET" && req.url === "/datos") {
     res.writeHead(200, {
-      "Content-Type": "text/html",
+      "Content-Type": "application/json",
     });
 
-    res.end(`
-
-      <html>
-
-      <head>
-
-        <title>AulaSense</title>
-
-        <meta http-equiv="refresh" content="2">
-
-        <style>
-
-          body{
-            background:#111;
-            color:white;
-            font-family:Arial;
-            text-align:center;
-          }
-
-          .card{
-            background:#222;
-            width:250px;
-            margin:auto;
-            padding:20px;
-            border-radius:20px;
-            margin-top:20px;
-          }
-
-          h1{
-            color:#00d9ff;
-          }
-
-        </style>
-
-      </head>
-
-      <body>
-
-        <h1> AulaSense Dashboard</h1>
-
-        <div class="card">
-
-          <h2> Temperatura</h2>
-          <p>${datos.temperatura} °C</p>
-
-        </div>
-
-        <div class="card">
-
-          <h2> Humedad</h2>
-          <p>${datos.humedad} %</p>
-
-        </div>
-
-        <div class="card">
-
-          <h2> Sonido</h2>
-          <p>${datos.sonido}</p>
-
-        </div>
-
-        <div class="card"></div>
-
-          <h2> Movimiento</h2>
-          <p>${datos.movimiento == 1 ? "Detectado" : "Sin movimiento"}</p>
-
-      </body>
-
-      </html>
-
-    `);
+    res.end(JSON.stringify(datos));
   }
 
-  // =========================
-  // DEFAULT
-  // =========================
+  // =====================
+  // HTML
+  // =====================
+  else if (req.method === "GET" && req.url === "/") {
+    const filePath = path.join(__dirname, "../dashboard/index.html");
+
+    fs.readFile(filePath, (err, content) => {
+      res.writeHead(200, {
+        "Content-Type": "text/html",
+      });
+
+      res.end(content);
+    });
+  }
+
+  // =====================
+  // CSS
+  // =====================
+  else if (req.method === "GET" && req.url === "/styles.css") {
+    const filePath = path.join(__dirname, "../dashboard/styles.css");
+
+    fs.readFile(filePath, (err, content) => {
+      res.writeHead(200, {
+        "Content-Type": "text/css",
+      });
+
+      res.end(content);
+    });
+  }
+
+  // =====================
+  // JS
+  // =====================
+  else if (req.method === "GET" && req.url === "/app.js") {
+    const filePath = path.join(__dirname, "../dashboard/app.js");
+
+    fs.readFile(filePath, (err, content) => {
+      res.writeHead(200, {
+        "Content-Type": "application/javascript",
+      });
+
+      res.end(content);
+    });
+  }
+
+  // =====================
+  // 404
+  // =====================
   else {
     res.writeHead(404);
 
     res.end("Ruta no encontrada");
   }
 });
+
+// =========================
+// INICIAR SERVER
+// =========================
 
 server.listen(port, host, () => {
   console.log(`Servidor corriendo en puerto ${port}`);

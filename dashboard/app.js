@@ -1,70 +1,144 @@
-const tempText = document.getElementById("temp");
-const humedadText = document.getElementById("humedad");
-const sonidoText = document.getElementById("sonido");
-const personasText = document.getElementById("personas");
+// =========================
+// CANVAS
+// =========================
 
 const canvas = document.getElementById("salon");
+
 const ctx = canvas.getContext("2d");
 
-//  Obtener datos del servidor
+// =========================
+// TEXTOS
+// =========================
+
+const sonidoText = document.getElementById("sonido");
+
+const movimientoText = document.getElementById("movimiento");
+
+const personasText = document.getElementById("personas");
+
+// =========================
+// OBTENER DATOS
+// =========================
+
 async function obtenerDatos() {
-  const respuesta = await fetch("/datos");
+  try {
+    const respuesta = await fetch("/datos");
 
-  const datos = await respuesta.json();
+    const datos = await respuesta.json();
 
-  console.log(datos);
+    console.log(datos);
 
-  // 🔊 sonido
-  document.getElementById("sonido").innerText = datos.sonido;
+    // =====================
+    // TEXTO
+    // =====================
 
-  // 🚶 movimiento
-  document.getElementById("movimiento").innerText =
-    datos.movimiento == 1 ? "Detectado" : "Sin movimiento";
+    sonidoText.innerText = datos.sonido || 0;
+
+    movimientoText.innerText =
+      datos.movimiento == 1 ? "Detectado" : "Sin movimiento";
+
+    personasText.innerText = datos.personas || 0;
+
+    // =====================
+    // DIBUJAR
+    // =====================
+
+    dibujarSalon(datos);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
-setInterval(obtenerDatos, 2000);
+// =========================
+// DIBUJAR AULA
+// =========================
 
-obtenerDatos();
-
-//  Dibujar aula
 function dibujarSalon(data) {
+  // Limpiar canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // =========================
-  // COLOR POR SONIDO
-  // =========================
-  const sonido = data.ambiente?.sonido || 0;
+  // =====================
+  // COLOR SEGÚN SONIDO
+  // =====================
 
-  if (sonido < 30) ctx.fillStyle = "#8BC34A";
-  else if (sonido < 60) ctx.fillStyle = "#FFC107";
-  else ctx.fillStyle = "#F44336";
+  const sonido = data.sonido || 0;
 
+  if (sonido < 30) {
+    ctx.fillStyle = "#4CAF50";
+  } else if (sonido < 60) {
+    ctx.fillStyle = "#FFC107";
+  } else {
+    ctx.fillStyle = "#F44336";
+  }
+
+  // Fondo del aula
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // =========================
+  // =====================
+  // PIZARRÓN
+  // =====================
+
+  ctx.fillStyle = "#222";
+
+  ctx.fillRect(250, 20, 200, 60);
+
+  // =====================
   // PUERTA
-  // =========================
-  ctx.fillStyle = "#5D4037";
+  // =====================
 
-  ctx.fillRect(0, 140, 30, 120);
+  ctx.fillStyle = "#6D4C41";
 
-  // =========================
+  ctx.fillRect(0, 180, 40, 120);
+
+  // =====================
   // PERSONAS
-  // =========================
-  const personas = data.ocupacion?.personas || 0;
+  // =====================
+
+  const personas = data.personas || 0;
 
   for (let i = 0; i < personas; i++) {
+    let x = 120 + (i % 5) * 100;
+
+    let y = 160 + Math.floor(i / 5) * 100;
+
+    // Cabeza
     ctx.beginPath();
 
-    ctx.arc(100 + i * 50, 200, 15, 0, Math.PI * 2);
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
 
     ctx.fillStyle = "#1565C0";
 
     ctx.fill();
+
+    // Cuerpo
+    ctx.fillRect(x - 10, y + 20, 20, 40);
+  }
+
+  // =====================
+  // MOVIMIENTO PIR
+  // =====================
+
+  if (data.movimiento == 1) {
+    ctx.fillStyle = "red";
+
+    ctx.beginPath();
+
+    ctx.arc(700, 80, 25, 0, Math.PI * 2);
+
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+
+    ctx.font = "20px Arial";
+
+    ctx.fillText("MOVIMIENTO", 620, 130);
   }
 }
 
-//  Actualizar cada segundo
+// =========================
+// ACTUALIZAR
+// =========================
+
 setInterval(obtenerDatos, 1000);
 
 obtenerDatos();
