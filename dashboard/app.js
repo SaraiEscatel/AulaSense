@@ -1,144 +1,263 @@
-// =========================
-// CANVAS
-// =========================
-
+// ==========================================
+// CONFIGURACIÓN DE RADAR & LIENZO (CANVAS)
+// ==========================================
 const canvas = document.getElementById("salon");
-
 const ctx = canvas.getContext("2d");
 
-// =========================
-// TEXTOS
-// =========================
+// Historial en memoria para cálculos estadísticos
+let historialSonido = [];
 
+// Variables globales para registrar la posición del mouse dentro del aula
+let mouseX = 0;
+let mouseY = 0;
+
+// Variables globales para compartir el cálculo del cursor con el panel matemático
+let calculoFlotanteCompartido =
+  "Mueva el cursor sobre el mapa para calcular...";
+
+// Enlaces al DOM
 const sonidoText = document.getElementById("sonido");
-
 const movimientoText = document.getElementById("movimiento");
-
 const personasText = document.getElementById("personas");
+const tempText = document.getElementById("temperatura");
+const humText = document.getElementById("humedad");
 
-// =========================
-// OBTENER DATOS
-// =========================
+// Registrar el movimiento del mouse sobre el lienzo para corroborar datos
+canvas.addEventListener("mousemove", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = event.clientX - rect.left;
+  mouseY = event.clientY - rect.top;
+});
 
+/** Funcion para obtener datos */
 async function obtenerDatos() {
   try {
     const respuesta = await fetch("/datos");
-
     const datos = await respuesta.json();
 
     console.log(datos);
 
-    // =====================
-    // TEXTO
-    // =====================
-
+    // Mapeo de variables reales de la ESP32
     sonidoText.innerText = datos.sonido || 0;
-
     movimientoText.innerText =
-      datos.movimiento == 1 ? "Detectado" : "Sin movimiento";
+      datos.movimiento == 1 ? "Activado" : "Desactivado";
+    personasText.innerHTML = `${datos.personas || 0} <small>personas</small>`;
 
-    personasText.innerText = datos.personas || 0;
+    // Captura de los sensores físicos de Clima
+    if (tempText)
+      tempText.innerText = datos.temperatura
+        ? datos.temperatura.toFixed(1)
+        : "0.0";
+    if (humText) humText.innerText = datos.humedad || 0;
 
-    // =====================
-    // DIBUJAR
-    // =====================
-
-    dibujarSalon(datos);
+    // Procesamiento de Render y Operaciones
+    mostrarCalculosMatematicos(datos);
+    dibujarRadarClimatico(datos);
   } catch (error) {
     console.log(error);
   }
 }
 
-// =========================
-// DIBUJAR AULA
-// =========================
+// ==========================================
+// MÓDULO MATEMÁTICO: DETERMINAR COLOR POR GRADOS
+// ==========================================
+function obtenerColorPorTemperatura(t) {
+  if (t < 22) return "rgba(56, 189, 248, 0.25)";
+  if (t < 28) return "rgba(16, 185, 129, 0.25)";
+  if (t < 31) return "rgba(245, 158, 11, 0.35)";
+  return "rgba(239, 68, 68, 0.4)";
+}
 
-function dibujarSalon(data) {
-  // Limpiar canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // =====================
-  // COLOR SEGÚN SONIDO
-  // =====================
-
-  const sonido = data.sonido || 0;
-
-  if (sonido < 30) {
-    ctx.fillStyle = "#4CAF50";
-  } else if (sonido < 60) {
-    ctx.fillStyle = "#FFC107";
-  } else {
-    ctx.fillStyle = "#F44336";
-  }
-
-  // Fondo del aula
+// ==========================================
+// RENDERIZADO DEL MAPA DE CLIMA (FLUIDO HD)
+// ==========================================
+function dibujarRadarClimatico(data) {
+  // 1. Limpiar lienzo técnico
+  ctx.fillStyle = "#070a12";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // =====================
-  // PIZARRÓN
-  // =====================
+  // 2. CREAR NUBES TÉRMICAS FLUIDAS
+  ctx.globalCompositeOperation = "screen";
 
-  ctx.fillStyle = "#222";
+  data.sensoresFisicos.forEach((sensor) => {
+    let radioDifusion = 450;
+    let gradienteLiquido = ctx.createRadialGradient(
+      sensor.x,
+      sensor.y,
+      5,
+      sensor.x,
+      sensor.y,
+      radioDifusion,
+    );
 
-  ctx.fillRect(250, 20, 200, 60);
+    let colorFusión = obtenerColorPorTemperatura(sensor.temp);
 
-  // =====================
-  // PUERTA
-  // =====================
+    gradienteLiquido.addColorStop(0, colorFusión);
+    gradienteLiquido.addColorStop(
+      0.3,
+      colorFusión
+        .replace("0.25", "0.12")
+        .replace("0.35", "0.15")
+        .replace("0.4", "0.18"),
+    );
+    gradienteLiquido.addColorStop(0.6, "rgba(0, 0, 0, 0)");
+    gradienteLiquido.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-  ctx.fillStyle = "#6D4C41";
-
-  ctx.fillRect(0, 180, 40, 120);
-
-  // =====================
-  // PERSONAS
-  // =====================
-
-  const personas = data.personas || 0;
-
-  for (let i = 0; i < personas; i++) {
-    let x = 120 + (i % 5) * 100;
-
-    let y = 160 + Math.floor(i / 5) * 100;
-
-    // Cabeza
+    ctx.fillStyle = gradienteLiquido;
     ctx.beginPath();
-
-    ctx.arc(x, y, 18, 0, Math.PI * 2);
-
-    ctx.fillStyle = "#1565C0";
-
+    ctx.arc(sensor.x, sensor.y, radioDifusion, 0, Math.PI * 2);
     ctx.fill();
+  });
 
-    // Cuerpo
-    ctx.fillRect(x - 10, y + 20, 20, 40);
+  ctx.globalCompositeOperation = "source-over";
+
+  // 3. Rejilla de Radar de Fondo
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.02)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 50) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
   }
 
-  // =====================
-  // MOVIMIENTO PIR
-  // =====================
+  // 4. Arquitectura del Aula
+  ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
 
-  if (data.movimiento == 1) {
-    ctx.fillStyle = "red";
+  // Puerta Lateral
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(16, 220, 10, 80);
+  ctx.strokeStyle = "#f59e0b";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(16, 220);
+  ctx.lineTo(16, 300);
+  ctx.stroke();
 
+  // 5. Nodos de Rastreo Físico
+  data.sensoresFisicos.forEach((sensor, index) => {
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.beginPath();
-
-    ctx.arc(700, 80, 25, 0, Math.PI * 2);
-
+    ctx.arc(sensor.x, sensor.y, 15, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(sensor.x, sensor.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
 
-    ctx.font = "20px Arial";
+    ctx.fillStyle = "#38bdf8";
+    ctx.font = "bold 10px 'JetBrains Mono'";
+    ctx.fillText(
+      `[ESP32_N${index + 1}]: ${sensor.temp}°C`,
+      sensor.x - 45,
+      sensor.y - 15,
+    );
+  });
 
-    ctx.fillText("MOVIMIENTO", 620, 130);
+  // 6. Alumnos
+  const personas = data.personas || 0;
+  for (let i = 0; i < personas; i++) {
+    let x = 160 + (i % 4) * 160;
+    let y = 150 + Math.floor(i / 4) * 110;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 7. CALCULO MATEMÁTICO BAJO EL CURSOR EN TIEMPO REAL
+  if (
+    mouseX > 15 &&
+    mouseX < canvas.width - 15 &&
+    mouseY > 15 &&
+    mouseY < canvas.height - 15
+  ) {
+    let sumaPesos = 0;
+    let sumaTemperaturas = 0;
+    let logConsola = [];
+
+    logConsola.push(
+      `<span style="color: #10b981;"> X: ${Math.round(mouseX)}px | Y: ${Math.round(mouseY)}px</span>`,
+    );
+
+    data.sensoresFisicos.forEach((sensor, idx) => {
+      let dx = mouseX - sensor.x;
+      let dy = mouseY - sensor.y;
+      let d = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      // Algoritmo de Ponderación del Inverso de la Distancia (IDW)
+      let peso = 1 / Math.pow(d, 2);
+      sumaPesos += peso;
+      sumaTemperaturas += sensor.temp * peso;
+
+      logConsola.push(
+        `  • Distancia a N${idx + 1}: <span style="color: #fff;">${Math.round(d)}px</span> (W: ${peso.encodeForLog || peso.toExponential(2)})`,
+      );
+    });
+
+    let tempEstimada = (sumaTemperaturas / sumaPesos).toFixed(2);
+    logConsola.push(
+      `  <span style="color: #f59e0b;">> Interpolación: ${tempEstimada}°C</span>`,
+    );
+
+    // Guardamos la cadena HTML estructurada para la ventanita exterior
+    calculoFlotanteCompartido = logConsola.join("<br>");
+
+    // Dibujar una pequeña cruz sutil que siga al puntero sin estorbar el mapa
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(mouseX - 5, mouseY);
+    ctx.lineTo(mouseX + 5, mouseY);
+    ctx.moveTo(mouseX, mouseY - 5);
+    ctx.lineTo(mouseX, mouseY + 5);
+    ctx.stroke();
+  } else {
+    calculoFlotanteCompartido =
+      "<span style='color: #6b7280;'>Mueva el cursor dentro del mapa para iniciar el motor de cálculo matemático IDW en tiempo real...</span>";
+  }
+
+  // Encabezados superiores
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "600 12px 'Inter'";
+  ctx.fillText(
+    `PROMEDIO GENERAL: ${data.temperatura}°C | ${data.humedad}% RH`,
+    40,
+    50,
+  );
+}
+
+// ==========================================
+// VENTANA DE CÁLCULOS MATEMÁTICOS EN TIEMPO REAL
+// ==========================================
+function mostrarCalculosMatematicos(datos, t1, t2) {
+  historialSonido.push(datos.sonido);
+  if (historialSonido.length > 8) historialSonido.shift();
+
+  const suma = historialSonido.reduce((a, b) => a + b, 0);
+  const promedioSonido = (suma / historialSonido.length).toFixed(1);
+  const areaM2 = 64;
+  const densidad = (datos.personas / areaM2).toFixed(3);
+
+  const contenedorMetricas = document.getElementById("metricas-calculadas");
+  if (contenedorMetricas) {
+    contenedorMetricas.innerHTML = `
+      • N1 Fijo: <span style="color: #fff;">${t1}°C</span> | N2 Fijo: <span style="color: #fff;">${t2}°C</span><br>
+      -----------------------------------------<br>
+      ${calculoFlotanteCompartido}
+    `;
   }
 }
 
-// =========================
-// ACTUALIZAR
-// =========================
-
-setInterval(obtenerDatos, 1000);
-
+// ==========================================
+// BUCLE DE BARRIDO CONTINUO (1.4 SEGUNDOS)
+// ==========================================
+setInterval(obtenerDatos, 1400);
 obtenerDatos();

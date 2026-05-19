@@ -1,77 +1,74 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AulaSense - Centro de Control Ambiental</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="main-header"></header>
 
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>AulaSense Dashboard</title>
-
-    <link rel="stylesheet" href="styles.css">
-
-</head>
-
-<body>
-
-    <h1>AulaSense</h1>
-
-    <div class="contenedor">
-
-        <!-- PANEL -->
-
-        <div class="card">
-
-            <h2>🔊 Sonido</h2>
-
-            <p id="sonido">0</p>
-
+    <main class="dashboard-layout">
+      <section class="sidebar">
+        <div class="card card-telemetry">
+          <div class="card-icon" style="color: #ef4444">🌡️</div>
+          <div class="card-info">
+            <h3>Temperatura</h3>
+            <p><span id="temperatura">0.0</span> <small>°C</small></p>
+          </div>
         </div>
 
-        <div class="card">
-
-            <h2>🚶 Movimiento</h2>
-
-            <p id="movimiento">
-
-                Sin datos
-
-            </p>
-
+        <div class="card card-telemetry">
+          <div class="card-icon" style="color: #38bdf8">💧</div>
+          <div class="card-info">
+            <h3>Humedad Relativa</h3>
+            <p><span id="humedad">0</span> <small>% RH</small></p>
+          </div>
         </div>
 
-        <div class="card">
-
-            <h2>👨 Personas</h2>
-
-            <p id="personas">
-
-                0
-
-            </p>
-
+        <div class="card card-telemetry">
+          <div class="card-icon">🔊</div>
+          <div class="card-info">
+            <h3>Nivel de Sonido</h3>
+            <p><span id="sonido">0</span> <small>dB</small></p>
+          </div>
         </div>
 
-        <!-- AULA -->
-
-        <div class="salon-container">
-
-            <h2>
-
-                Simulación del Aula
-
-            </h2>
-
-            <canvas id="salon" width="800" height="500">
-            </canvas>
-
+        <div class="card card-telemetry">
+          <div class="card-icon">🚶</div>
+          <div class="card-info">
+            <h3>Actividad PIR</h3>
+            <p id="movimiento" class="status-text">Analizando...</p>
+          </div>
         </div>
 
-    </div>
+        <div class="card card-telemetry">
+          <div class="card-icon">👨</div>
+          <div class="card-info">
+            <h3>Índice de Ocupación</h3>
+            <p><span id="personas">0</span></p>
+          </div>
+        </div>
+
+        <div class="card computations-panel">
+          <div id="metricas-calculadas" class="terminal-output"></div>
+        </div>
+      </section>
+
+      <section class="map-view">
+        <div class="radar-container">
+          <div class="canvas-wrapper">
+            <canvas id="salon" width="850" height="520"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <script src="app.js"></script>
-
-</body>
-
+  </body>
 </html>
