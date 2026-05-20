@@ -47,8 +47,8 @@ async function obtenerDatos() {
         : "0.0";
     if (humText) humText.innerText = datos.humedad || 0;
 
-    // ALGORITMO DE SIMULACIÓN DE CO2: Explicación para tu exposición
-    // Base: 400 ppm (aire limpio exterior). Sumamos 75 ppm por cada persona presente.
+    //CO2:
+    // Base: 400 ppm. Sumamos 75 ppm por cada persona presente.
     const nPersonas = datos.personas || 0;
     const variacionAleatoria = Math.floor(Math.random() * 30) - 15; // Genera cambios de +/- 15 ppm para simular un sensor real
     let co2Estimado = 400 + nPersonas * 75 + variacionAleatoria;
