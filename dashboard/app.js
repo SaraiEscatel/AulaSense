@@ -35,26 +35,57 @@ async function obtenerDatos() {
     const respuesta = await fetch("/datos");
     const datos = await respuesta.json();
 
-    console.log(datos);
+    console.log("Datos recibidos del servidor:", datos);
 
-    // Mapeo de variables reales de la ESP32
-    sonidoText.innerText = datos.sonido || 0;
-    movimientoText.innerText =
-      datos.movimiento == 1 ? "Activado" : "Desactivado";
-    personasText.innerHTML = `${datos.personas || 0} <small>personas</small>`;
+    // Mapeo de variables reales de la ESP32 en el panel superior/lateral
+    if (sonidoText) sonidoText.innerText = datos.sonido || 0;
+    if (movimientoText) {
+      movimientoText.innerText =
+        datos.movimiento == 1 ? "Activado" : "Desactivado";
+    }
+    if (personasText) {
+      personasText.innerHTML = `${datos.personas || 0} <small>personas</small>`;
+    }
 
     // Captura de los sensores físicos de Clima
-    if (tempText)
+    if (tempText) {
       tempText.innerText = datos.temperatura
         ? datos.temperatura.toFixed(1)
         : "0.0";
+    }
     if (humText) humText.innerText = datos.humedad || 0;
 
-    // Procesamiento de Render y Operaciones
-    mostrarCalculosMatematicos(datos);
+    // --- CORRECCIÓN CRÍTICA: VALIDAR O MAPEAR SENSORES FÍSICOS ---
+    // Si tu backend no envía el arreglo 'sensoresFisicos', lo creamos dinámicamente
+    // mapeando las coordenadas X, Y deseadas en el Canvas para cada ESP32.
+    if (!datos.sensoresFisicos) {
+      datos.sensoresFisicos = [
+        {
+          x: 150,
+          y: 180,
+          temp: datos.temperaturaN1 || datos.temperatura || 25.0,
+        }, // Nodo ESP32 1
+        {
+          x: 500,
+          y: 320,
+          temp: datos.temperaturaN2 || datos.temperatura || 27.0,
+        }, // Nodo ESP32 2
+      ];
+    }
+
+    // Extraer t1 y t2 de forma segura para el panel matemático
+    const t1 = datos.sensoresFisicos[0]
+      ? datos.sensoresFisicos[0].temp
+      : datos.temperatura;
+    const t2 = datos.sensoresFisicos[1]
+      ? datos.sensoresFisicos[1].temp
+      : datos.temperatura;
+
+    // Procesamiento de Render y Operaciones pasando las variables requeridas
+    mostrarCalculosMatematicos(datos, t1, t2);
     dibujarRadarClimatico(datos);
   } catch (error) {
-    console.log(error);
+    console.error("Error al obtener o renderizar los datos:", error);
   }
 }
 
@@ -198,13 +229,13 @@ function dibujarRadarClimatico(data) {
       sumaTemperaturas += sensor.temp * peso;
 
       logConsola.push(
-        `  • Distancia a N${idx + 1}: <span style="color: #fff;">${Math.round(d)}px</span> (W: ${peso.encodeForLog || peso.toExponential(2)})`,
+        `  • Distancia a N${idx + 1}: <span style="color: #fff;">${Math.round(d)}px</span> (W: ${peso.toExponential(2)})`,
       );
     });
 
     let tempEstimada = (sumaTemperaturas / sumaPesos).toFixed(2);
     logConsola.push(
-      `  <span style="color: #f59e0b;">> Interpolación: ${tempEstimada}°C</span>`,
+      `  <span style="color: #f59e0b;">> Interpolación IDW: ${tempEstimada}°C</span>`,
     );
 
     // Guardamos la cadena HTML estructurada para la ventanita exterior
@@ -224,11 +255,11 @@ function dibujarRadarClimatico(data) {
       "<span style='color: #6b7280;'>Mueva el cursor dentro del mapa para iniciar el motor de cálculo matemático IDW en tiempo real...</span>";
   }
 
-  // Encabezados superiores
+  // Encabezados superiores del Canvas
   ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.font = "600 12px 'Inter'";
   ctx.fillText(
-    `PROMEDIO GENERAL: ${data.temperatura}°C | ${data.humedad}% RH`,
+    `PROMEDIO GENERAL: ${data.temperatura || 0}°C | ${data.humedad || 0}% RH`,
     40,
     50,
   );
@@ -238,19 +269,14 @@ function dibujarRadarClimatico(data) {
 // VENTANA DE CÁLCULOS MATEMÁTICOS EN TIEMPO REAL
 // ==========================================
 function mostrarCalculosMatematicos(datos, t1, t2) {
-  historialSonido.push(datos.sonido);
+  historialSonido.push(datos.sonido || 0);
   if (historialSonido.length > 8) historialSonido.shift();
-
-  const suma = historialSonido.reduce((a, b) => a + b, 0);
-  const promedioSonido = (suma / historialSonido.length).toFixed(1);
-  const areaM2 = 64;
-  const densidad = (datos.personas / areaM2).toFixed(3);
 
   const contenedorMetricas = document.getElementById("metricas-calculadas");
   if (contenedorMetricas) {
     contenedorMetricas.innerHTML = `
-      • N1 Fijo: <span style="color: #fff;">${t1}°C</span> | N2 Fijo: <span style="color: #fff;">${t2}°C</span><br>
-      -----------------------------------------<br>
+      • N1 Fijo: <span style="color: #fff;">${t1 ? t1.toFixed(1) : "0.0"}°C</span> | N2 Fijo: <span style="color: #fff;">${t2 ? t2.toFixed(1) : "0.0"}°C</span><br>
+      --------------------------------------------------<br>
       ${calculoFlotanteCompartido}
     `;
   }
